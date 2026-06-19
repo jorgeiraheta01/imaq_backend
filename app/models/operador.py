@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -9,14 +10,15 @@ from app.database import Base
 class Operador(Base):
     __tablename__ = "operadores"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    nombre: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
-    telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    especialidad: Mapped[str | None] = mapped_column(String(150), nullable=True)
-    anios_experiencia: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    tarifa_por_dia: Mapped[float | None] = mapped_column(Float, nullable=True)
-    disponible: Mapped[bool] = mapped_column(Boolean, default=True)
-    creado_en: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    usuario_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False
+    )
+    experiencia_anios: Mapped[int] = mapped_column(Integer, default=0)
+    tarifa_dia: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    certificaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verificado: Mapped[bool] = mapped_column(Boolean, default=False)
+    creado_en: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+    usuario = relationship("Usuario", back_populates="operador")
     alquileres = relationship("Alquiler", back_populates="operador")

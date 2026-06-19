@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from app.auth import crear_access_token, hashear_password, verificar_password
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.schemas.schemas import LoginRequest, Token, UsuarioCreate, UsuarioOut
+from app.schemas.auth import LoginRequest, Token
+from app.schemas.usuario import UsuarioCreate, UsuarioOut
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -19,8 +20,8 @@ def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
         nombre=usuario.nombre,
         email=usuario.email,
         telefono=usuario.telefono,
-        es_proveedor=usuario.es_proveedor,
-        hashed_password=hashear_password(usuario.password),
+        rol=usuario.rol,
+        password_hash=hashear_password(usuario.password),
     )
     db.add(nuevo_usuario)
     db.commit()
@@ -31,7 +32,7 @@ def registrar_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(credenciales: LoginRequest, db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == credenciales.email).first()
-    if not usuario or not verificar_password(credenciales.password, usuario.hashed_password):
+    if not usuario or not verificar_password(credenciales.password, usuario.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas",

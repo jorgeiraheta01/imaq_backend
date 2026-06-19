@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.alquiler import Alquiler
 from app.models.maquina import Maquina
 from app.models.usuario import Usuario
-from app.schemas.schemas import AlquilerCreate, AlquilerOut, AlquilerUpdate
+from app.schemas.alquiler import AlquilerCreate, AlquilerOut, AlquilerUpdate
 
 router = APIRouter(prefix="/alquileres", tags=["Alquileres"])
 
@@ -20,7 +20,7 @@ def listar_alquileres(
 ):
     return (
         db.query(Alquiler)
-        .filter(Alquiler.cliente_id == usuario_actual.id)
+        .filter(Alquiler.arrendatario_id == usuario_actual.id)
         .offset(skip)
         .limit(limit)
         .all()
@@ -36,7 +36,7 @@ def obtener_alquiler(
     alquiler = db.query(Alquiler).filter(Alquiler.id == alquiler_id).first()
     if not alquiler:
         raise HTTPException(status_code=404, detail="Alquiler no encontrado")
-    if alquiler.cliente_id != usuario_actual.id:
+    if alquiler.arrendatario_id != usuario_actual.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para ver este alquiler")
     return alquiler
 
@@ -50,18 +50,18 @@ def crear_alquiler(
     maquina = db.query(Maquina).filter(Maquina.id == alquiler.maquina_id).first()
     if not maquina:
         raise HTTPException(status_code=404, detail="Máquina no encontrada")
-    if not maquina.disponible:
+    if maquina.estado != "disponible":
         raise HTTPException(status_code=400, detail="La máquina no está disponible")
 
     dias = (alquiler.fecha_fin - alquiler.fecha_inicio).days
     if dias <= 0:
         raise HTTPException(status_code=400, detail="El rango de fechas no es válido")
 
-    costo_total = dias * maquina.precio_por_dia
+    costo_total = dias * alquiler.precio_acordado
 
     nuevo_alquiler = Alquiler(
         **alquiler.model_dump(),
-        cliente_id=usuario_actual.id,
+        arrendatario_id=usuario_actual.id,
         costo_total=costo_total,
     )
     db.add(nuevo_alquiler)
@@ -80,7 +80,7 @@ def actualizar_alquiler(
     alquiler = db.query(Alquiler).filter(Alquiler.id == alquiler_id).first()
     if not alquiler:
         raise HTTPException(status_code=404, detail="Alquiler no encontrado")
-    if alquiler.cliente_id != usuario_actual.id:
+    if alquiler.arrendatario_id != usuario_actual.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para modificar este alquiler")
 
     for campo, valor in datos.model_dump(exclude_unset=True).items():
@@ -100,7 +100,7 @@ def cancelar_alquiler(
     alquiler = db.query(Alquiler).filter(Alquiler.id == alquiler_id).first()
     if not alquiler:
         raise HTTPException(status_code=404, detail="Alquiler no encontrado")
-    if alquiler.cliente_id != usuario_actual.id:
+    if alquiler.arrendatario_id != usuario_actual.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para cancelar este alquiler")
 
     alquiler.estado = "cancelado"

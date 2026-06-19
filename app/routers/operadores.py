@@ -5,7 +5,7 @@ from app.auth import obtener_usuario_actual
 from app.database import get_db
 from app.models.operador import Operador
 from app.models.usuario import Usuario
-from app.schemas.schemas import OperadorCreate, OperadorOut, OperadorUpdate
+from app.schemas.operador import OperadorCreate, OperadorOut, OperadorUpdate
 
 router = APIRouter(prefix="/operadores", tags=["Operadores"])
 
@@ -29,9 +29,9 @@ def crear_operador(
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(obtener_usuario_actual),
 ):
-    existente = db.query(Operador).filter(Operador.email == operador.email).first()
+    existente = db.query(Operador).filter(Operador.usuario_id == operador.usuario_id).first()
     if existente:
-        raise HTTPException(status_code=400, detail="El email ya está registrado para un operador")
+        raise HTTPException(status_code=400, detail="Este usuario ya está registrado como operador")
 
     nuevo_operador = Operador(**operador.model_dump())
     db.add(nuevo_operador)

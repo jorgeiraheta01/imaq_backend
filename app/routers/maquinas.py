@@ -5,7 +5,7 @@ from app.auth import obtener_usuario_actual
 from app.database import get_db
 from app.models.maquina import Maquina
 from app.models.usuario import Usuario
-from app.schemas.schemas import MaquinaCreate, MaquinaOut, MaquinaUpdate
+from app.schemas.maquina import MaquinaCreate, MaquinaOut, MaquinaUpdate
 
 router = APIRouter(prefix="/maquinas", tags=["Máquinas"])
 
