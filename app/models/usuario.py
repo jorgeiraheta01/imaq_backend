@@ -20,6 +20,7 @@ class Usuario(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     telefono: Mapped[str | None] = mapped_column(String(20), nullable=True)
     rol: Mapped[str] = mapped_column(String(20), nullable=False)
+    dui: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True)
     foto_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     verificado: Mapped[bool] = mapped_column(Boolean, default=False)
     creado_en: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

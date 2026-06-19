@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.auth import obtener_usuario_actual
 from app.database import get_db
 from app.models.maquina import Maquina
 from app.models.usuario import Usuario
+from app.rate_limit import limiter
 from app.schemas.maquina import MaquinaCreate, MaquinaOut, MaquinaUpdate
 
 router = APIRouter(prefix="/maquinas", tags=["Máquinas"])
@@ -24,7 +25,9 @@ def obtener_maquina(maquina_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=MaquinaOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 def crear_maquina(
+    request: Request,
     maquina: MaquinaCreate,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(obtener_usuario_actual),

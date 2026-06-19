@@ -2,10 +2,18 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 EstadoMaquina = Literal["disponible", "alquilada", "mantenimiento"]
 TipoPrecio = Literal["hora", "dia"]
+
+CLOUDINARY_PREFIX = "https://res.cloudinary.com/dunj6mccp/"
+
+
+def _validar_cloudinary_url(v: str | None) -> str | None:
+    if v and not v.startswith(CLOUDINARY_PREFIX):
+        raise ValueError(f"imagen_url debe ser una URL de Cloudinary válida ({CLOUDINARY_PREFIX}...)")
+    return v
 
 
 class MaquinaBase(BaseModel):
@@ -30,7 +38,10 @@ class MaquinaBase(BaseModel):
 
 
 class MaquinaCreate(MaquinaBase):
-    pass
+    @field_validator("imagen_url")
+    @classmethod
+    def validar_imagen_url(cls, v: str | None) -> str | None:
+        return _validar_cloudinary_url(v)
 
 
 class MaquinaUpdate(BaseModel):
@@ -53,6 +64,11 @@ class MaquinaUpdate(BaseModel):
     nombre_contacto: str | None = None
     departamento_id: int | None = None
     estado: EstadoMaquina | None = None
+
+    @field_validator("imagen_url")
+    @classmethod
+    def validar_imagen_url(cls, v: str | None) -> str | None:
+        return _validar_cloudinary_url(v)
 
 
 class MaquinaOut(MaquinaBase):

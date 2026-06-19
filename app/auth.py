@@ -15,7 +15,9 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+RESET_PASSWORD_TOKEN_EXPIRE_MINUTES = 15
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -32,8 +34,31 @@ def hashear_password(password: str) -> str:
 def crear_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def crear_refresh_token(data: dict) -> tuple[str, datetime]:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return token, expire
+
+
+def crear_reset_password_token(data: dict) -> tuple[str, datetime]:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_PASSWORD_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire, "type": "reset_password"})
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return token, expire
+
+
+def decodificar_token(token: str) -> dict | None:
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
 
 
 def obtener_usuario_actual(
@@ -47,7 +72,7 @@ def obtener_usuario_actual(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str | None = payload.get("sub")
-        if email is None:
+        if email is None or payload.get("type", "access") != "access":
             raise credenciales_invalidas
     except JWTError:
         raise credenciales_invalidas

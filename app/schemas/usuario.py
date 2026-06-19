@@ -1,9 +1,17 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 Rol = Literal["propietario", "operador", "arrendatario", "admin"]
+
+CLOUDINARY_PREFIX = "https://res.cloudinary.com/dunj6mccp/"
+
+
+def _validar_cloudinary_url(v: str | None) -> str | None:
+    if v and not v.startswith(CLOUDINARY_PREFIX):
+        raise ValueError(f"foto_url debe ser una URL de Cloudinary válida ({CLOUDINARY_PREFIX}...)")
+    return v
 
 
 class UsuarioBase(BaseModel):
@@ -15,6 +23,7 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     password: str
+    dui: str = Field(pattern=r"^[0-9]{8}-[0-9]{1}$", description="DUI salvadoreño, ej: 01234567-8")
 
 
 class UsuarioUpdate(BaseModel):
@@ -22,6 +31,11 @@ class UsuarioUpdate(BaseModel):
     telefono: str | None = None
     foto_url: str | None = None
     verificado: bool | None = None
+
+    @field_validator("foto_url")
+    @classmethod
+    def validar_foto_url(cls, v: str | None) -> str | None:
+        return _validar_cloudinary_url(v)
 
 
 class UsuarioOut(UsuarioBase):
