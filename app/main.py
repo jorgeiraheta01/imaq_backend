@@ -26,8 +26,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
+    # Wildcard for development so the Android app (and any other client) can
+    # hit the API freely; auth uses a Bearer token header, not cookies, so
+    # allow_credentials stays False — browsers reject a wildcard origin
+    # combined with credentials=True anyway. Restrict allow_origins to the
+    # real domains before deploying to production.
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
