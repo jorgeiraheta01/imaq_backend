@@ -5,7 +5,7 @@ from app.auth import crear_access_token, hashear_password, obtener_usuario_actua
 from app.database import get_db
 from app.models.usuario import Usuario
 from app.schemas.auth import LoginRequest, Token
-from app.schemas.usuario import UsuarioCreate, UsuarioOut
+from app.schemas.usuario import CambiarPasswordRequest, UsuarioCreate, UsuarioOut
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -46,3 +46,16 @@ def login(credenciales: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UsuarioOut)
 def obtener_perfil_actual(usuario_actual: Usuario = Depends(obtener_usuario_actual)):
     return usuario_actual
+
+
+@router.put("/cambiar-password", status_code=status.HTTP_204_NO_CONTENT)
+def cambiar_password(
+    datos: CambiarPasswordRequest,
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual),
+):
+    if not verificar_password(datos.password_actual, usuario_actual.password_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+    usuario_actual.password_hash = hashear_password(datos.password_nueva)
+    db.commit()

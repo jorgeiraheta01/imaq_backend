@@ -37,3 +37,12 @@ def crear_sesion(
     db.commit()
     db.refresh(nueva_sesion)
     return nueva_sesion
+
+
+@router.delete("/todas", status_code=status.HTTP_204_NO_CONTENT)
+def cerrar_todas_las_sesiones(
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual),
+):
+    db.query(Sesion).filter(Sesion.usuario_id == usuario_actual.id).update({"activo": False})
+    db.commit()

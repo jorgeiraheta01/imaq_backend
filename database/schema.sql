@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash VARCHAR(255) NOT NULL,
     telefono VARCHAR(20),
     rol VARCHAR(20) NOT NULL CHECK (rol IN ('propietario','operador','arrendatario','admin')),
+    foto_url VARCHAR(500),
     verificado BOOLEAN DEFAULT FALSE,
     creado_en TIMESTAMP DEFAULT NOW()
 );
@@ -51,6 +52,15 @@ CREATE TABLE IF NOT EXISTS maquinas (
     latitud DECIMAL(10,8),
     longitud DECIMAL(11,8),
     imagen_url VARCHAR(500),
+    tipo_precio VARCHAR(10) DEFAULT 'dia' CHECK (tipo_precio IN ('hora','dia')),
+    marca VARCHAR(100),
+    capacidad VARCHAR(100),
+    "año" INTEGER,
+    horometro VARCHAR(50),
+    incluye_operador BOOLEAN DEFAULT FALSE,
+    incluye_combustible BOOLEAN DEFAULT FALSE,
+    telefono_contacto VARCHAR(20),
+    nombre_contacto VARCHAR(100),
     estado VARCHAR(20) DEFAULT 'disponible' CHECK (estado IN ('disponible','alquilada','mantenimiento')),
     creado_en TIMESTAMP DEFAULT NOW()
 );
