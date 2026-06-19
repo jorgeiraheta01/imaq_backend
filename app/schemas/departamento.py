@@ -10,6 +10,11 @@ class DepartamentoCreate(DepartamentoBase):
     pass
 
 
+class DepartamentoUpdate(BaseModel):
+    nombre: str | None = None
+    pais: str | None = None
+
+
 class DepartamentoOut(DepartamentoBase):
     id: int
 

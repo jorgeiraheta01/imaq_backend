@@ -14,6 +14,12 @@ class DisponibilidadCreate(DisponibilidadBase):
     pass
 
 
+class DisponibilidadUpdate(BaseModel):
+    fecha_inicio: date | None = None
+    fecha_fin: date | None = None
+    motivo: str | None = None
+
+
 class DisponibilidadOut(DisponibilidadBase):
     id: int
     creado_en: datetime

@@ -14,6 +14,11 @@ class CalificacionCreate(CalificacionBase):
     pass
 
 
+class CalificacionUpdate(BaseModel):
+    estrellas: int | None = Field(default=None, ge=1, le=5)
+    comentario: str | None = None
+
+
 class CalificacionOut(CalificacionBase):
     id: int
     usuario_id: int

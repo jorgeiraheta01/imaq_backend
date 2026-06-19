@@ -15,6 +15,12 @@ class DispositivoCreate(DispositivoBase):
     pass
 
 
+class DispositivoUpdate(BaseModel):
+    fcm_token: str | None = None
+    plataforma: Plataforma | None = None
+    activo: bool | None = None
+
+
 class DispositivoOut(DispositivoBase):
     id: int
     usuario_id: int

@@ -13,6 +13,11 @@ class EspecificacionCreate(EspecificacionBase):
     pass
 
 
+class EspecificacionUpdate(BaseModel):
+    clave: str | None = None
+    valor: str | None = None
+
+
 class EspecificacionOut(EspecificacionBase):
     id: int
     creado_en: datetime

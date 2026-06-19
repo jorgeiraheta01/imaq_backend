@@ -15,6 +15,11 @@ class FotoMaquinaCreate(FotoMaquinaBase):
     pass
 
 
+class FotoMaquinaUpdate(BaseModel):
+    es_principal: bool | None = None
+    orden: int | None = None
+
+
 class FotoMaquinaOut(FotoMaquinaBase):
     id: int
     creado_en: datetime
