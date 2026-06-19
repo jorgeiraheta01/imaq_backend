@@ -15,6 +15,7 @@ class MaquinaBase(BaseModel):
     ubicacion: str | None = None
     latitud: Decimal | None = None
     longitud: Decimal | None = None
+    imagen_url: str | None = None
     departamento_id: int | None = None
 
 
@@ -30,6 +31,7 @@ class MaquinaUpdate(BaseModel):
     ubicacion: str | None = None
     latitud: Decimal | None = None
     longitud: Decimal | None = None
+    imagen_url: str | None = None
     departamento_id: int | None = None
     estado: EstadoMaquina | None = None
 

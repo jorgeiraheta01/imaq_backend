@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS maquinas (
     ubicacion VARCHAR(150),
     latitud DECIMAL(10,8),
     longitud DECIMAL(11,8),
+    imagen_url VARCHAR(500),
     estado VARCHAR(20) DEFAULT 'disponible' CHECK (estado IN ('disponible','alquilada','mantenimiento')),
     creado_en TIMESTAMP DEFAULT NOW()
 );

@@ -27,6 +27,7 @@ class Maquina(Base):
     ubicacion: Mapped[str | None] = mapped_column(String(150), nullable=True)
     latitud: Mapped[Decimal | None] = mapped_column(Numeric(10, 8), nullable=True)
     longitud: Mapped[Decimal | None] = mapped_column(Numeric(11, 8), nullable=True)
+    imagen_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     estado: Mapped[str] = mapped_column(String(20), default="disponible")
     creado_en: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

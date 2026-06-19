@@ -14,6 +14,7 @@ from app.routers import (
     maquinas,
     operadores,
     sesiones,
+    usuarios,
 )
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(auth.router)
+app.include_router(usuarios.router)
 app.include_router(maquinas.router)
 app.include_router(operadores.router)
 app.include_router(alquileres.router)

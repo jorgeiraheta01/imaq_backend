@@ -29,3 +29,13 @@ class UsuarioOut(UsuarioBase):
     creado_en: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UsuarioPublicoOut(BaseModel):
+    id: int
+    nombre: str
+    telefono: str | None = None
+    rol: Rol
+    verificado: bool
+
+    model_config = {"from_attributes": True}
