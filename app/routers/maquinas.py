@@ -1,4 +1,7 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth import obtener_usuario_actual
@@ -10,10 +13,57 @@ from app.schemas.maquina import MaquinaCreate, MaquinaOut, MaquinaUpdate
 
 router = APIRouter(prefix="/maquinas", tags=["Máquinas"])
 
+OrdenMaquina = Literal["precio_asc", "precio_desc", "reciente"]
+
 
 @router.get("/", response_model=list[MaquinaOut])
-def listar_maquinas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(Maquina).offset(skip).limit(limit).all()
+def listar_maquinas(
+    skip: int = 0,
+    limit: int = 100,
+    buscar: str | None = None,
+    estado: str | None = None,
+    tipo: str | None = None,
+    departamento_id: int | None = None,
+    precio_max: float | None = None,
+    tipo_precio: str | None = None,
+    incluye_operador: bool | None = None,
+    orden: OrdenMaquina | None = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Maquina)
+
+    if buscar:
+        patron = f"%{buscar}%"
+        query = query.filter(
+            or_(
+                Maquina.nombre.ilike(patron),
+                Maquina.descripcion.ilike(patron),
+                Maquina.marca.ilike(patron),
+                Maquina.ubicacion.ilike(patron),
+                Maquina.nombre_contacto.ilike(patron),
+            )
+        )
+    if estado:
+        query = query.filter(Maquina.estado == estado)
+    if tipo:
+        query = query.filter(Maquina.tipo.ilike(f"%{tipo}%"))
+    if departamento_id is not None:
+        query = query.filter(Maquina.departamento_id == departamento_id)
+    if precio_max is not None:
+        query = query.filter(Maquina.precio_dia <= precio_max)
+    if tipo_precio:
+        query = query.filter(Maquina.tipo_precio == tipo_precio)
+    if incluye_operador is not None:
+        query = query.filter(Maquina.incluye_operador == incluye_operador)
+
+    if orden == "precio_asc":
+        query = query.order_by(Maquina.precio_dia.asc())
+    elif orden == "precio_desc":
+        query = query.order_by(Maquina.precio_dia.desc())
+    elif orden == "reciente":
+        query = query.order_by(Maquina.creado_en.desc())
+
+    return query.offset(skip).limit(limit).all()
 
 
 @router.get("/{maquina_id}", response_model=MaquinaOut)
