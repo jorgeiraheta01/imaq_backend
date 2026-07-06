@@ -151,6 +151,29 @@ CREATE TABLE IF NOT EXISTS dispositivos (
     creado_en TIMESTAMP DEFAULT NOW()
 );
 
+-- 14. COTIZACIONES (negociación previa a un alquiler confirmado)
+CREATE TABLE IF NOT EXISTS cotizaciones (
+    id SERIAL PRIMARY KEY,
+    maquina_id INTEGER NOT NULL REFERENCES maquinas(id),
+    arrendatario_id INTEGER NOT NULL REFERENCES usuarios(id),
+    propietario_id INTEGER NOT NULL REFERENCES usuarios(id),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    precio_propuesto DECIMAL(10,2) NOT NULL,
+    notas TEXT,
+    estado VARCHAR(20) DEFAULT 'pendiente' CHECK (estado IN ('pendiente','contraoferta','aceptada','rechazada','cancelada','expirada')),
+    precio_contraoferta DECIMAL(10,2),
+    fecha_inicio_contraoferta DATE,
+    fecha_fin_contraoferta DATE,
+    notas_contraoferta TEXT,
+    motivo_rechazo TEXT,
+    alquiler_id INTEGER REFERENCES alquileres(id),
+    visto BOOLEAN DEFAULT FALSE,
+    fecha_creacion TIMESTAMP DEFAULT NOW(),
+    fecha_respuesta TIMESTAMP,
+    fecha_expiracion TIMESTAMP
+);
+
 -- Datos iniciales de departamentos de El Salvador
 INSERT INTO departamentos (nombre, pais) VALUES
     ('San Salvador', 'El Salvador'),

@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.alquiler import Alquiler
 from app.models.maquina import Maquina
 from app.models.usuario import Usuario
-from app.schemas.alquiler import AlquilerCreate, AlquilerOut, AlquilerUpdate
+from app.schemas.alquiler import AlquilerCreate, AlquilerOut, AlquilerPublicoOut, AlquilerUpdate
 
 router = APIRouter(prefix="/alquileres", tags=["Alquileres"])
 
@@ -23,6 +23,21 @@ def listar_alquileres(
         .filter(Alquiler.arrendatario_id == usuario_actual.id)
         .offset(skip)
         .limit(limit)
+        .all()
+    )
+
+
+@router.get("/publico/por-maquina/{maquina_id}", response_model=list[AlquilerPublicoOut])
+def listar_alquileres_publicos_por_maquina(maquina_id: int, db: Session = Depends(get_db)):
+    """Historial público de alquileres de una máquina (sin auth), para mostrar
+    en el catálogo/modal de detalle. No expone arrendatario_id ni precios."""
+    return (
+        db.query(Alquiler)
+        .filter(
+            Alquiler.maquina_id == maquina_id,
+            Alquiler.estado.in_(["activo", "finalizado"]),
+        )
+        .order_by(Alquiler.fecha_inicio.desc())
         .all()
     )
 

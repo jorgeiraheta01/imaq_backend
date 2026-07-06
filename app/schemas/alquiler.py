@@ -34,3 +34,14 @@ class AlquilerOut(AlquilerBase):
     creado_en: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AlquilerPublicoOut(BaseModel):
+    """Vista pública del historial de alquileres de una máquina: sin identidad
+    del arrendatario ni precios, solo para mostrar actividad en el catálogo."""
+
+    fecha_inicio: date
+    fecha_fin: date
+    estado: EstadoAlquiler
+
+    model_config = {"from_attributes": True}

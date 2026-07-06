@@ -21,6 +21,7 @@ from app.routers import (
     alquileres,
     auth,
     calificaciones,
+    cotizaciones,
     departamentos,
     disponibilidad,
     documentos_verificacion,
@@ -143,6 +144,7 @@ app.include_router(favoritos.router)
 app.include_router(dispositivos.router)
 app.include_router(sesiones.router)
 app.include_router(documentos_verificacion.router)
+app.include_router(cotizaciones.router)
 
 
 @app.get("/")

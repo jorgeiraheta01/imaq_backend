@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.auth import obtener_usuario_actual
@@ -53,6 +53,12 @@ def listar_operadores(
         query = query.order_by(Operador.verificado.desc(), Operador.experiencia_anios.desc())
 
     return query.offset(skip).limit(limit).all()
+
+
+@router.get("/count")
+def contar_operadores(db: Session = Depends(get_db)):
+    total = db.query(func.count(Operador.id)).scalar()
+    return {"total": total}
 
 
 @router.get("/{operador_id}", response_model=OperadorOut)

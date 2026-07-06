@@ -11,6 +11,7 @@ from app.models.alquiler import Alquiler
 from app.models.calificacion import Calificacion
 from app.models.favorito import Favorito
 from app.models.dispositivo import Dispositivo
+from app.models.cotizacion import Cotizacion
 
 __all__ = [
     "Departamento",
@@ -26,4 +27,5 @@ __all__ = [
     "Calificacion",
     "Favorito",
     "Dispositivo",
+    "Cotizacion",
 ]
