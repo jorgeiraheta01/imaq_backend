@@ -50,9 +50,12 @@ class UsuarioOut(UsuarioBase):
 
 
 class UsuarioPublicoOut(BaseModel):
+    """Vista publica minima: sin telefono. El contacto por WhatsApp de un
+    propietario se expone via maquina.telefono_contacto (que el dueño
+    publica explicitamente por cada anuncio), no de forma global aqui."""
+
     id: int
     nombre: str
-    telefono: str | None = None
     foto_url: str | None = None
     rol: Rol
     verificado: bool
