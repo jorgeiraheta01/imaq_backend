@@ -104,15 +104,19 @@ def crear_cotizacion(
         raise HTTPException(status_code=404, detail="Máquina no encontrada")
     if maquina.propietario_id == usuario_actual.id:
         raise HTTPException(status_code=400, detail="No puedes cotizar tu propia máquina")
-    if datos.precio_propuesto >= maquina.precio_dia:
-        raise HTTPException(
-            status_code=400,
-            detail=f"El precio propuesto debe ser menor al precio de lista de la máquina (${maquina.precio_dia})",
-        )
 
     dias = (datos.fecha_fin - datos.fecha_inicio).days
     if dias <= 0:
         raise HTTPException(status_code=400, detail="El rango de fechas no es válido")
+
+    # precio_propuesto es el TOTAL a pagar por todo el período (no una tarifa unitaria),
+    # así que se compara contra el total al precio de lista para ese mismo rango de fechas.
+    presupuesto_lista = maquina.precio_dia * dias
+    if datos.precio_propuesto >= presupuesto_lista:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El precio propuesto debe ser menor al total al precio de lista para ese período (${presupuesto_lista})",
+        )
 
     bloqueada = (
         db.query(Cotizacion)
@@ -201,13 +205,16 @@ def aceptar_cotizacion(
     conflicto_fechas = _verificar_solapamiento(cotizacion.maquina_id, fecha_inicio_final, fecha_fin_final, db)
 
     dias = (fecha_fin_final - fecha_inicio_final).days
+    # precio_final es el TOTAL acordado para el período; Alquiler.precio_acordado
+    # guarda una tarifa por unidad (para ser consistente con el alquiler creado
+    # directamente por el propietario), así que se deriva dividiendo entre los días.
     nuevo_alquiler = Alquiler(
         maquina_id=cotizacion.maquina_id,
         arrendatario_id=cotizacion.arrendatario_id,
         fecha_inicio=fecha_inicio_final,
         fecha_fin=fecha_fin_final,
-        precio_acordado=precio_final,
-        costo_total=dias * precio_final,
+        precio_acordado=round(precio_final / dias, 2),
+        costo_total=precio_final,
         estado="pendiente",
     )
     db.add(nuevo_alquiler)
