@@ -104,6 +104,11 @@ def crear_cotizacion(
         raise HTTPException(status_code=404, detail="Máquina no encontrada")
     if maquina.propietario_id == usuario_actual.id:
         raise HTTPException(status_code=400, detail="No puedes cotizar tu propia máquina")
+    if datos.precio_propuesto >= maquina.precio_dia:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El precio propuesto debe ser menor al precio de lista de la máquina (${maquina.precio_dia})",
+        )
 
     dias = (datos.fecha_fin - datos.fecha_inicio).days
     if dias <= 0:
