@@ -21,8 +21,8 @@ class CotizacionRechazar(BaseModel):
 
 class CotizacionContraoferta(BaseModel):
     precio_contraoferta: Decimal
-    fecha_inicio_contraoferta: date
-    fecha_fin_contraoferta: date
+    fecha_inicio_contraoferta: date | None = None
+    fecha_fin_contraoferta: date | None = None
     notas_contraoferta: str | None = None
 
 
@@ -45,6 +45,8 @@ class CotizacionOut(BaseModel):
     motivo_rechazo: str | None = None
     alquiler_id: int | None = None
     visto: bool
+    visto_propietario: bool = False
+    visto_arrendatario: bool = False
 
     fecha_creacion: datetime
     fecha_respuesta: datetime | None = None

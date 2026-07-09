@@ -40,6 +40,8 @@ class Cotizacion(Base):
     motivo_rechazo: Mapped[str | None] = mapped_column(Text, nullable=True)
     alquiler_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("alquileres.id"), nullable=True)
     visto: Mapped[bool] = mapped_column(Boolean, default=False)
+    visto_propietario: Mapped[bool] = mapped_column(Boolean, default=False)
+    visto_arrendatario: Mapped[bool] = mapped_column(Boolean, default=False)
 
     fecha_creacion: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     fecha_respuesta: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

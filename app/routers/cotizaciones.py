@@ -107,12 +107,27 @@ def crear_cotizacion(
     if dias <= 0:
         raise HTTPException(status_code=400, detail="El rango de fechas no es válido")
 
+    bloqueada = (
+        db.query(Cotizacion)
+        .filter(
+            Cotizacion.maquina_id == datos.maquina_id,
+            Cotizacion.estado == "aceptada",
+            Cotizacion.fecha_inicio <= datos.fecha_fin,
+            Cotizacion.fecha_fin >= datos.fecha_inicio,
+        )
+        .first()
+    )
+    if bloqueada:
+        raise HTTPException(status_code=409, detail="Esas fechas ya están reservadas para esta máquina")
+
     nueva_cotizacion = Cotizacion(
         **datos.model_dump(),
         arrendatario_id=usuario_actual.id,
         propietario_id=maquina.propietario_id,
         estado="pendiente",
         visto=False,
+        visto_propietario=False,
+        visto_arrendatario=True,
         fecha_expiracion=datetime.utcnow() + timedelta(hours=EXPIRACION_HORAS),
     )
     db.add(nueva_cotizacion)
@@ -129,6 +144,8 @@ def listar_cotizaciones_enviadas(
     cotizaciones = db.query(Cotizacion).filter(Cotizacion.arrendatario_id == usuario_actual.id).all()
     for c in cotizaciones:
         _expirar_si_corresponde(c, db)
+        if not c.visto_arrendatario:
+            c.visto_arrendatario = True
         if not c.visto:
             c.visto = True
     db.commit()
@@ -143,6 +160,8 @@ def listar_cotizaciones_recibidas(
     cotizaciones = db.query(Cotizacion).filter(Cotizacion.propietario_id == usuario_actual.id).all()
     for c in cotizaciones:
         _expirar_si_corresponde(c, db)
+        if not c.visto_propietario:
+            c.visto_propietario = True
         if not c.visto:
             c.visto = True
     db.commit()
@@ -191,6 +210,30 @@ def aceptar_cotizacion(
     cotizacion.alquiler_id = nuevo_alquiler.id
     cotizacion.fecha_respuesta = datetime.utcnow()
     cotizacion.visto = False
+    if usuario_actual.id == cotizacion.propietario_id:
+        cotizacion.visto_propietario = True
+        cotizacion.visto_arrendatario = False
+    else:
+        cotizacion.visto_arrendatario = True
+        cotizacion.visto_propietario = False
+
+    solapadas = (
+        db.query(Cotizacion)
+        .filter(
+            Cotizacion.maquina_id == cotizacion.maquina_id,
+            Cotizacion.id != cotizacion.id,
+            Cotizacion.estado.in_(ESTADOS_ABIERTOS),
+            Cotizacion.fecha_inicio <= fecha_fin_final,
+            Cotizacion.fecha_fin >= fecha_inicio_final,
+        )
+        .all()
+    )
+    for s in solapadas:
+        s.estado = "expirada"
+        s.motivo_rechazo = "Las fechas que solicitaste ya fueron reservadas por otro alquiler. Explora otras máquinas similares en el catálogo."
+        s.fecha_respuesta = datetime.utcnow()
+        s.visto_arrendatario = False
+
     db.commit()
     db.refresh(cotizacion)
 
@@ -219,6 +262,12 @@ def rechazar_cotizacion(
     cotizacion.motivo_rechazo = datos.motivo_rechazo
     cotizacion.fecha_respuesta = datetime.utcnow()
     cotizacion.visto = False
+    if usuario_actual.id == cotizacion.propietario_id:
+        cotizacion.visto_propietario = True
+        cotizacion.visto_arrendatario = False
+    else:
+        cotizacion.visto_arrendatario = True
+        cotizacion.visto_propietario = False
     db.commit()
     db.refresh(cotizacion)
     return _construir_salida(cotizacion)
@@ -238,17 +287,22 @@ def contraofertar_cotizacion(
     if cotizacion.estado != "pendiente":
         raise HTTPException(status_code=400, detail=f"No se puede contraofertar una cotización en estado '{cotizacion.estado}'")
 
-    dias = (datos.fecha_fin_contraoferta - datos.fecha_inicio_contraoferta).days
+    fecha_inicio_final = datos.fecha_inicio_contraoferta or cotizacion.fecha_inicio
+    fecha_fin_final = datos.fecha_fin_contraoferta or cotizacion.fecha_fin
+
+    dias = (fecha_fin_final - fecha_inicio_final).days
     if dias <= 0:
         raise HTTPException(status_code=400, detail="El rango de fechas no es válido")
 
     cotizacion.estado = "contraoferta"
     cotizacion.precio_contraoferta = datos.precio_contraoferta
-    cotizacion.fecha_inicio_contraoferta = datos.fecha_inicio_contraoferta
-    cotizacion.fecha_fin_contraoferta = datos.fecha_fin_contraoferta
+    cotizacion.fecha_inicio_contraoferta = fecha_inicio_final
+    cotizacion.fecha_fin_contraoferta = fecha_fin_final
     cotizacion.notas_contraoferta = datos.notas_contraoferta
     cotizacion.fecha_respuesta = datetime.utcnow()
     cotizacion.visto = False
+    cotizacion.visto_propietario = True
+    cotizacion.visto_arrendatario = False
     db.commit()
     db.refresh(cotizacion)
     return _construir_salida(cotizacion)
@@ -270,6 +324,8 @@ def cancelar_cotizacion(
     cotizacion.estado = "cancelada"
     cotizacion.fecha_respuesta = datetime.utcnow()
     cotizacion.visto = False
+    cotizacion.visto_arrendatario = True
+    cotizacion.visto_propietario = False
     db.commit()
     db.refresh(cotizacion)
     return _construir_salida(cotizacion)
@@ -280,24 +336,54 @@ def contar_no_vistas(
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(obtener_usuario_actual),
 ):
-    """Conteo para el badge del navbar: cotizaciones recibidas pendientes sin
-    ver, más contraofertas enviadas sin ver."""
+    """Conteo para el badge del navbar (backwards-compat)."""
     recibidas = (
         db.query(Cotizacion)
         .filter(
             Cotizacion.propietario_id == usuario_actual.id,
-            Cotizacion.visto.is_(False),
+            Cotizacion.visto_propietario.is_(False),
+            Cotizacion.estado.in_(["pendiente", "cancelada"]),
+        )
+        .count()
+    )
+    respuestas = (
+        db.query(Cotizacion)
+        .filter(
+            Cotizacion.arrendatario_id == usuario_actual.id,
+            Cotizacion.visto_arrendatario.is_(False),
+            Cotizacion.estado.in_(["contraoferta", "aceptada", "rechazada", "expirada"]),
+        )
+        .count()
+    )
+    return {"total": recibidas + respuestas}
+
+
+@router.get("/resumen-no-vistas")
+def resumen_no_vistas(
+    db: Session = Depends(get_db),
+    usuario_actual: Usuario = Depends(obtener_usuario_actual),
+):
+    """Resumen detallado para el popup post-login."""
+    recibidas_pendientes = (
+        db.query(Cotizacion)
+        .filter(
+            Cotizacion.propietario_id == usuario_actual.id,
+            Cotizacion.visto_propietario.is_(False),
             Cotizacion.estado == "pendiente",
         )
         .count()
     )
-    enviadas = (
+    respuestas_nuevas = (
         db.query(Cotizacion)
         .filter(
             Cotizacion.arrendatario_id == usuario_actual.id,
-            Cotizacion.visto.is_(False),
-            Cotizacion.estado == "contraoferta",
+            Cotizacion.visto_arrendatario.is_(False),
+            Cotizacion.estado.in_(["contraoferta", "aceptada", "rechazada", "expirada"]),
         )
         .count()
     )
-    return {"total": recibidas + enviadas}
+    return {
+        "recibidas_pendientes": recibidas_pendientes,
+        "respuestas_nuevas": respuestas_nuevas,
+        "total": recibidas_pendientes + respuestas_nuevas,
+    }

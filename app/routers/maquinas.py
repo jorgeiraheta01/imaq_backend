@@ -1,15 +1,25 @@
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth import obtener_usuario_actual
 from app.database import get_db
+from app.models.cotizacion import Cotizacion
+from app.models.disponibilidad import Disponibilidad
 from app.models.maquina import Maquina
 from app.models.usuario import Usuario
 from app.rate_limit import limiter
 from app.schemas.maquina import MaquinaCreate, MaquinaOut, MaquinaUpdate
+
+
+class BloqueDisponibilidad(BaseModel):
+    fecha_inicio: date
+    fecha_fin: date
+    motivo: str
 
 router = APIRouter(prefix="/maquinas", tags=["Máquinas"])
 
@@ -124,3 +134,39 @@ def eliminar_maquina(
 
     db.delete(maquina)
     db.commit()
+
+
+@router.get("/{maquina_id}/disponibilidad", response_model=list[BloqueDisponibilidad])
+def listar_disponibilidad_maquina(
+    maquina_id: int,
+    db: Session = Depends(get_db),
+):
+    maquina = db.query(Maquina).filter(Maquina.id == maquina_id).first()
+    if not maquina:
+        raise HTTPException(status_code=404, detail="Máquina no encontrada")
+
+    bloques: list[BloqueDisponibilidad] = []
+
+    cotizaciones_aceptadas = (
+        db.query(Cotizacion)
+        .filter(
+            Cotizacion.maquina_id == maquina_id,
+            Cotizacion.estado == "aceptada",
+        )
+        .all()
+    )
+    for cot in cotizaciones_aceptadas:
+        fi = cot.fecha_inicio_contraoferta or cot.fecha_inicio
+        ff = cot.fecha_fin_contraoferta or cot.fecha_fin
+        bloques.append(BloqueDisponibilidad(fecha_inicio=fi, fecha_fin=ff, motivo="Alquiler confirmado"))
+
+    disponibilidad_manual = (
+        db.query(Disponibilidad)
+        .filter(Disponibilidad.maquina_id == maquina_id)
+        .all()
+    )
+    for d in disponibilidad_manual:
+        bloques.append(BloqueDisponibilidad(fecha_inicio=d.fecha_inicio, fecha_fin=d.fecha_fin, motivo=d.motivo or "No disponible"))
+
+    bloques.sort(key=lambda b: b.fecha_inicio)
+    return bloques
