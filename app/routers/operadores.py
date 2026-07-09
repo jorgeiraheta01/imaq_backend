@@ -75,11 +75,11 @@ def crear_operador(
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(obtener_usuario_actual),
 ):
-    existente = db.query(Operador).filter(Operador.usuario_id == operador.usuario_id).first()
+    existente = db.query(Operador).filter(Operador.usuario_id == usuario_actual.id).first()
     if existente:
         raise HTTPException(status_code=400, detail="Este usuario ya está registrado como operador")
 
-    nuevo_operador = Operador(**operador.model_dump())
+    nuevo_operador = Operador(**operador.model_dump(exclude={"usuario_id"}), usuario_id=usuario_actual.id)
     db.add(nuevo_operador)
     db.commit()
     db.refresh(nuevo_operador)
@@ -96,8 +96,10 @@ def actualizar_operador(
     operador = db.query(Operador).filter(Operador.id == operador_id).first()
     if not operador:
         raise HTTPException(status_code=404, detail="Operador no encontrado")
+    if operador.usuario_id != usuario_actual.id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para editar este operador")
 
-    for campo, valor in datos.model_dump(exclude_unset=True).items():
+    for campo, valor in datos.model_dump(exclude_unset=True, exclude={"verificado"}).items():
         setattr(operador, campo, valor)
 
     db.commit()
@@ -114,6 +116,8 @@ def eliminar_operador(
     operador = db.query(Operador).filter(Operador.id == operador_id).first()
     if not operador:
         raise HTTPException(status_code=404, detail="Operador no encontrado")
+    if operador.usuario_id != usuario_actual.id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para eliminar este operador")
 
     db.delete(operador)
     db.commit()

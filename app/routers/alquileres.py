@@ -98,7 +98,9 @@ def actualizar_alquiler(
     if alquiler.arrendatario_id != usuario_actual.id:
         raise HTTPException(status_code=403, detail="No tienes permiso para modificar este alquiler")
 
-    for campo, valor in datos.model_dump(exclude_unset=True).items():
+    # estado y costo_total no son editables por el arrendatario: solo el flujo
+    # de aceptacion de cotizacion o un proceso del sistema debe fijarlos.
+    for campo, valor in datos.model_dump(exclude_unset=True, exclude={"estado", "costo_total"}).items():
         setattr(alquiler, campo, valor)
 
     db.commit()

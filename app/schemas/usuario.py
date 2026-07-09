@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 Rol = Literal["propietario", "operador", "arrendatario", "admin"]
+RolRegistro = Literal["propietario", "operador", "arrendatario"]
 
 CLOUDINARY_PREFIX = "https://res.cloudinary.com/dunj6mccp/"
 
@@ -22,7 +23,8 @@ class UsuarioBase(BaseModel):
 
 
 class UsuarioCreate(UsuarioBase):
-    password: str
+    rol: RolRegistro
+    password: str = Field(min_length=8)
     dui: str = Field(pattern=r"^[0-9]{8}-[0-9]{1}$", description="DUI salvadoreño, ej: 01234567-8")
 
 
