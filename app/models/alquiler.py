@@ -33,3 +33,11 @@ class Alquiler(Base):
     arrendatario = relationship("Usuario", back_populates="alquileres")
     operador = relationship("Operador", back_populates="alquileres")
     calificaciones = relationship("Calificacion", back_populates="alquiler")
+
+    @property
+    def propietario_id(self) -> int:
+        """Id del dueño de la máquina asociada. No es una columna propia (Alquiler
+        no la tiene) sino que se deriva vía la relación `maquina`, para que el
+        cliente pueda distinguir su rol (propietario vs. arrendatario) sin
+        pedidos adicionales."""
+        return self.maquina.propietario_id

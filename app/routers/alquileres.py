@@ -1,4 +1,7 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth import obtener_usuario_actual
@@ -13,18 +16,33 @@ router = APIRouter(prefix="/alquileres", tags=["Alquileres"])
 
 @router.get("/", response_model=list[AlquilerOut])
 def listar_alquileres(
+    rol: Literal["arrendatario", "propietario", "todos"] = "arrendatario",
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     usuario_actual: Usuario = Depends(obtener_usuario_actual),
 ):
-    return (
-        db.query(Alquiler)
-        .filter(Alquiler.arrendatario_id == usuario_actual.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    """`rol` decide de qué lado de la relación se listan los alquileres:
+    - arrendatario (default, preserva el comportamiento previo): donde el
+      usuario alquiló una máquina de otro.
+    - propietario: donde el usuario es dueño de la máquina alquilada.
+    - todos: unión de ambos casos (útil para un usuario con ambos roles).
+    """
+    query = db.query(Alquiler)
+    if rol == "arrendatario":
+        query = query.filter(Alquiler.arrendatario_id == usuario_actual.id)
+    elif rol == "propietario":
+        query = query.join(Maquina, Alquiler.maquina_id == Maquina.id).filter(
+            Maquina.propietario_id == usuario_actual.id
+        )
+    else:
+        query = query.join(Maquina, Alquiler.maquina_id == Maquina.id).filter(
+            or_(
+                Alquiler.arrendatario_id == usuario_actual.id,
+                Maquina.propietario_id == usuario_actual.id,
+            )
+        )
+    return query.offset(skip).limit(limit).all()
 
 
 @router.get("/publico/por-maquina/{maquina_id}", response_model=list[AlquilerPublicoOut])
@@ -51,7 +69,7 @@ def obtener_alquiler(
     alquiler = db.query(Alquiler).filter(Alquiler.id == alquiler_id).first()
     if not alquiler:
         raise HTTPException(status_code=404, detail="Alquiler no encontrado")
-    if alquiler.arrendatario_id != usuario_actual.id:
+    if usuario_actual.id not in (alquiler.arrendatario_id, alquiler.propietario_id):
         raise HTTPException(status_code=403, detail="No tienes permiso para ver este alquiler")
     return alquiler
 

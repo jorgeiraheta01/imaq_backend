@@ -29,6 +29,7 @@ class AlquilerUpdate(BaseModel):
 class AlquilerOut(AlquilerBase):
     id: int
     arrendatario_id: int
+    propietario_id: int
     costo_total: Decimal | None = None
     estado: EstadoAlquiler
     creado_en: datetime
