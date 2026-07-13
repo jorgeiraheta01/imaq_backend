@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -334,6 +334,16 @@ def cancelar_cotizacion(
         raise HTTPException(status_code=403, detail="Solo el arrendatario que la creó puede cancelarla")
     if cotizacion.estado not in ESTADOS_ABIERTOS:
         raise HTTPException(status_code=400, detail=f"No se puede cancelar una cotización en estado '{cotizacion.estado}'")
+
+    # Solo se puede cancelar con 48h (2+ días, ya que fecha_inicio no tiene hora) de
+    # anticipación a la fecha de inicio. Usa la fecha de la contraoferta si existe, ya
+    # que esa es la fecha de arranque vigente en ese momento (mismo criterio que el frontend).
+    fecha_inicio_vigente = cotizacion.fecha_inicio_contraoferta or cotizacion.fecha_inicio
+    if (fecha_inicio_vigente - date.today()).days < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Ya no se puede cancelar: faltan menos de 48h para el inicio del alquiler",
+        )
 
     cotizacion.estado = "cancelada"
     cotizacion.fecha_respuesta = datetime.utcnow()
