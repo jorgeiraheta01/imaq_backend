@@ -43,6 +43,12 @@ class Cotizacion(Base):
     visto_propietario: Mapped[bool] = mapped_column(Boolean, default=False)
     visto_arrendatario: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # True solo cuando esta cotización fue auto-expirada porque OTRA cotización para la
+    # misma máquina/fechas fue aceptada primero (ver aceptar_cotizacion). Se fija en el
+    # momento exacto de la auto-expiración, no se deriva al leer — así no se confunde con
+    # una expiración por timeout (72h sin respuesta), que deja esto en False.
+    conflicto_fechas: Mapped[bool] = mapped_column(Boolean, default=False)
+
     fecha_creacion: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     fecha_respuesta: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     fecha_expiracion: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

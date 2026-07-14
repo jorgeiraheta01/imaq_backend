@@ -60,9 +60,16 @@ def _verificar_solapamiento(maquina_id: int, fecha_inicio, fecha_fin, db: Sessio
     return conflicto is not None
 
 
-def _construir_salida(cotizacion: Cotizacion, conflicto_fechas: bool = False) -> CotizacionOut:
+def _construir_salida(cotizacion: Cotizacion, conflicto_fechas: bool | None = None) -> CotizacionOut:
     """Serializa incluyendo el nombre/teléfono del arrendatario (para que el
-    propietario sepa quién cotiza y pueda avisarle por WhatsApp al aceptar)."""
+    propietario sepa quién cotiza y pueda avisarle por WhatsApp al aceptar).
+
+    `conflicto_fechas` por defecto se lee del valor persistido en el modelo
+    (True cuando esta cotización fue auto-expirada por solapamiento). Solo se
+    pasa un override explícito en /aceptar, donde además se le suma el aviso
+    de solapamiento con un alquiler ya confirmado (caso distinto, ver
+    `_verificar_solapamiento`)."""
+    valor_conflicto = cotizacion.conflicto_fechas if conflicto_fechas is None else conflicto_fechas
     return CotizacionOut(
         id=cotizacion.id,
         maquina_id=cotizacion.maquina_id,
@@ -87,7 +94,7 @@ def _construir_salida(cotizacion: Cotizacion, conflicto_fechas: bool = False) ->
         fecha_expiracion=cotizacion.fecha_expiracion,
         arrendatario_nombre=cotizacion.arrendatario.nombre,
         arrendatario_telefono=cotizacion.arrendatario.telefono,
-        conflicto_fechas=conflicto_fechas,
+        conflicto_fechas=valor_conflicto,
     )
 
 
@@ -247,6 +254,7 @@ def aceptar_cotizacion(
         s.motivo_rechazo = "Las fechas que solicitaste ya fueron reservadas por otro alquiler. Explora otras máquinas similares en el catálogo."
         s.fecha_respuesta = datetime.utcnow()
         s.visto_arrendatario = False
+        s.conflicto_fechas = True
 
     db.commit()
     db.refresh(cotizacion)
